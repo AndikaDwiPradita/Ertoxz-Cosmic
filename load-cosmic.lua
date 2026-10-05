@@ -1,31 +1,42 @@
 -- =========================================================
--- COSMIC PANEL LOGIC LOADER (REMOTE MEMORY BASED + AUTO LOGIN)
+-- COSMIC PANEL LOGIC LOADER (FIXED CONTEXT & LOGS)
 -- =========================================================
 
--- GANTI "USERNAME" DAN "REPO" SESUAI DENGAN GITHUB KAMU
 local GITHUB_BASE = "https://raw.githubusercontent.com/AndikaDwiPradita/Ertoxz-Cosmic/main/"
-local SESSION_FILE = "/sdcard/Android/media/com.rtsoft.growtopia/scripts/cosmic_session.txt"
+
+local SCRIPTS_DIR  = GetCurrentScriptDirectory and GetCurrentScriptDirectory() or "/sdcard/Android/media/com.rtsoft.growtopia/scripts/"
+local SESSION_FILE = SCRIPTS_DIR .. "cosmic_session.txt"
+local TEMP_RML     = SCRIPTS_DIR .. "CosmicPanel.rml"
+local TEMP_RCSS    = SCRIPTS_DIR .. "CosmicPanel.rcss"
 
 COSMIC_PANEL_DOC = nil
 COSMIC_ACTIVE_TAB = "login"
 COSMIC_LOGGED_IN = false
 COSMIC_USER = nil
 
--- Status Toggle
 COSMIC_TOGGLES = {
     modfly = false,
     noclip = false,
     autofarm = false
 }
 
--- Mengambil elemen RmlUI dari ID
 local function GetEl(id)
     if not COSMIC_PANEL_DOC then return nil end
     return COSMIC_PANEL_DOC:GetElementById(id)
 end
 
+local function SaveFile(path, content)
+    local f = io.open(path, "wb")
+    if f then
+        f:write(content)
+        f:close()
+        return true
+    end
+    return false
+end
+
 -- =========================================================
--- MANAJEMEN SESI LOKAL (AUTO-LOGIN REMINDER)
+-- SESSION REMINDER
 -- =========================================================
 
 local function SaveSession(username)
@@ -52,9 +63,7 @@ local function ReadSession()
     local session = {}
     for line in f:lines() do
         local k, v = line:match("([^=]+)=(.+)")
-        if k and v then
-            session[k] = v
-        end
+        if k and v then session[k] = v end
     end
     f:close()
 
@@ -65,16 +74,13 @@ local function ReadSession()
 end
 
 -- =========================================================
--- EVENT HANDLERS / FUNGSI UI
+-- UI FUNCTIONS
 -- =========================================================
 
 function CosmicOnClose()
     if COSMIC_PANEL_DOC then
         COSMIC_PANEL_DOC:Hide()
         LogToConsole("`2[Cosmic] UI Closed.")
-        if CosmicBridge then
-            CosmicBridge.Emit("onUiAction", { action = "LOG_MESSAGE", message = "UI Closed" })
-        end
     end
 end
 
@@ -86,7 +92,6 @@ function CosmicOnMinimize()
 end
 
 function CosmicOnTab(tabName)
-    -- Mencegah akses ke tab lain jika belum login
     if not COSMIC_LOGGED_IN and tabName ~= "login" then
         tabName = "login"
     end
@@ -97,11 +102,7 @@ function CosmicOnTab(tabName)
     for _, t in ipairs(tabs) do
         local pageEl = GetEl("page-" .. t)
         if pageEl then
-            if t == tabName then
-                pageEl:SetClass("active", true)
-            else
-                pageEl:SetClass("active", false)
-            end
+            pageEl:SetClass("active", t == tabName)
         end
     end
 end
@@ -119,7 +120,6 @@ function CosmicOnLogin()
         return
     end
     
-    -- Simpan Sesi Login
     COSMIC_LOGGED_IN = true
     COSMIC_USER = userVal
     SaveSession(userVal)
@@ -159,13 +159,7 @@ function CosmicOnToggle(event, name)
         event.current_target:SetClass("active", state)
     end
     
-    if CosmicBridge then
-        CosmicBridge.Emit("onUiAction", {
-            action = "TOGGLE_FEATURE",
-            feature = name,
-            state = state
-        })
-    end
+    LogToConsole("`2[Cosmic] Toggle " .. name .. " -> " .. tostring(state))
 end
 
 function CosmicOnPilihScript(scriptName)
@@ -176,56 +170,75 @@ function CosmicOnButton(action)
     if action == "info" then
         local infoEl = GetEl("player-info-text")
         if infoEl then
-            infoEl:SetInnerRml("Posisi Player: X: 50, Y: 23 | World: EXIT")
+            infoEl:SetInnerRml("Posisi Player: Ready")
         end
     end
 end
 
 -- =========================================================
--- INITIALIZATION / RENDER ENGINE
+-- INITIALIZATION ENGINE (DYNAMIC CONTEXT)
 -- =========================================================
 
 local function InitCosmicUI()
-    -- 1. Load Cosmic Bridge Listener dari GitHub
-    LogToConsole("`2[Cosmic] Loading Bridge Listener...")
-    local bridgeRes = MakeRequest(GITHUB_BASE .. "cosmic_bridge_listener.lua", "GET")
-    if bridgeRes and bridgeRes.body and bridgeRes.body ~= "" then
-        local bridgeChunk, err = load(bridgeRes.body)
-        if bridgeChunk then
-            pcall(bridgeChunk)
-        else
-            LogToConsole("`4[Cosmic Bridge] Syntax Error: " .. tostring(err))
+    LogToConsole("`2[Cosmic] Starting UI Initialization...")
+
+    if not rmlui or not rmlui.contexts then
+        LogToConsole("`4[Cosmic Error] Object rmlui.contexts TIDAK DITEMUKAN!")
+        return
+    end
+
+    -- Cari Context RmlUI yang aktif (Bisa nama string atau index angka)
+    local ctx = nil
+    local ctxName = nil
+    for name, c in pairs(rmlui.contexts) do
+        if c then
+            ctx = c
+            ctxName = tostring(name)
+            break
         end
     end
 
-    -- 2. Download RML & RCSS dari GitHub
-    local ctx = rmlui.contexts[1]
     if not ctx then
-        LogToConsole("`4[Cosmic] Error: RmlUI Context not found!")
+        LogToConsole("`4[Cosmic Error] Tidak ada Context RmlUI yang aktif!")
         return
     end
 
-    LogToConsole("`2[Cosmic] Fetching RML & RCSS templates...")
-    local rmlRes = MakeRequest(GITHUB_BASE .. "CosmicPanel.rml", "GET")
+    LogToConsole("`2[Cosmic] RmlUI Context terdeteksi: " .. ctxName)
+
+    -- Download RML & RCSS dari GitHub
+    LogToConsole("`2[Cosmic] Downloading RML & RCSS...")
+    local rmlRes  = MakeRequest(GITHUB_BASE .. "CosmicPanel.rml", "GET")
     local rcssRes = MakeRequest(GITHUB_BASE .. "CosmicPanel.rcss", "GET")
 
     if not rmlRes or not rmlRes.body or rmlRes.body == "" then
-        LogToConsole("`4[Cosmic] Error loading CosmicPanel.rml!")
+        LogToConsole("`4[Cosmic Error] CosmicPanel.rml gagal di-download dari GitHub!")
         return
     end
 
-    -- Injeksi RCSS ke dalam tag <style> di RML
-    local rawRml = rmlRes.body
+    -- Simpan file ke folder lokal Bothax
+    local wRml = SaveFile(TEMP_RML, rmlRes.body)
     if rcssRes and rcssRes.body then
-        rawRml = rawRml:gsub('<link type="text/rcss" href="CosmicPanel.rcss"/>', '<style>' .. rcssRes.body .. '</style>')
+        SaveFile(TEMP_RCSS, rcssRes.body)
     end
 
-    -- Load Document langsung dari string RAM
-    COSMIC_PANEL_DOC = ctx:CreateDocumentFromString(rawRml)
+    if not wRml then
+        LogToConsole("`4[Cosmic Error] Gagal menulis file RML ke folder lokal!")
+        return
+    end
+
+    LogToConsole("`2[Cosmic] Template tersimpan di lokal. Loading document...")
+
+    -- Tutup dokumen lama jika ada
+    if ctx.documents and ctx.documents['CosmicPanel'] then
+        ctx.documents['CosmicPanel']:Close()
+    end
+
+    -- Load Dokumen dari file lokal
+    COSMIC_PANEL_DOC = ctx:LoadDocument(TEMP_RML)
     if COSMIC_PANEL_DOC then
         COSMIC_PANEL_DOC:Show()
+        LogToConsole("`2[Cosmic] SUCCESS! Panel UI Berhasil Tampil!")
         
-        -- Cek Sesi Auto-Login
         local savedUser = ReadSession()
         if savedUser then
             COSMIC_LOGGED_IN = true
@@ -238,14 +251,12 @@ local function InitCosmicUI()
             if logoutBtn then logoutBtn:SetClass("show", true) end
             
             CosmicOnTab("main")
-            LogToConsole("`2[Cosmic] Auto-login berhasil! Selamat datang kembali, " .. savedUser)
+            LogToConsole("`2[Cosmic] Auto-login: " .. savedUser)
         else
             CosmicOnTab("login")
-            LogToConsole("`2[Cosmic] Silakan login terlebih dahulu.")
         end
-
     else
-        LogToConsole("`4[Cosmic] Failed to create RmlUI Document!")
+        LogToConsole("`4[Cosmic Error] LoadDocument() gagal! Cek penulisan syntax RML/RCSS.")
     end
 end
 
