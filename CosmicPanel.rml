@@ -1,0 +1,182 @@
+<rml>
+<head>
+    <title>CosmicPanel</title>
+    <link type="text/rcss" href="CosmicPanel.rcss"/>
+</head>
+<body id="CosmicPanel">
+
+    <div class="window" id="cosmic-window">
+
+        <!-- TITLE BAR -->
+        <div class="title-bar">
+            <div class="title-left">
+                <div class="logo-badge">C</div>
+                <span class="title-text">Ertoxz Cosmic</span>
+            </div>
+            <div class="title-right">
+                <div class="btn-min" onclick="CosmicOnMinimize()">
+                    <div class="min-bar"></div>
+                </div>
+                <div class="btn-close" onclick="CosmicOnClose()">
+                    <div class="close-a"></div>
+                    <div class="close-b"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BODY AREA -->
+        <div class="body-area">
+
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+                <div class="tab-item active" data-tab="login" onclick="CosmicOnTab('login')">
+                    <span class="tab-bullet"></span>
+                    <span>Login</span>
+                </div>
+                <div class="tab-item" data-tab="main" onclick="CosmicOnTab('main')">
+                    <span class="tab-bullet"></span>
+                    <span>Main</span>
+                </div>
+                <div class="tab-item" data-tab="scripts" onclick="CosmicOnTab('scripts')">
+                    <span class="tab-bullet"></span>
+                    <span>Scripts</span>
+                </div>
+                <div class="tab-item" data-tab="player" onclick="CosmicOnTab('player')">
+                    <span class="tab-bullet"></span>
+                    <span>Player</span>
+                </div>
+                <div class="tab-item" data-tab="settings" onclick="CosmicOnTab('settings')">
+                    <span class="tab-bullet"></span>
+                    <span>Settings</span>
+                </div>
+
+                <div class="logout-btn" id="logout-btn" onclick="CosmicOnLogout()">
+                    <span>Logout</span>
+                </div>
+
+                <div class="sidebar-status">
+                    <span id="sidebar-user">Belum login</span>
+                </div>
+            </div>
+
+            <!-- CONTENT AREA -->
+            <div class="content-area">
+
+                <!-- TAB LOGIN -->
+                <div class="page active" id="page-login">
+                    <div class="login-box">
+                        <div class="login-title">SIGN IN</div>
+                        <div class="login-sub">Enter credentials to continue</div>
+
+                        <div class="login-field">
+                            <span class="login-label">Username</span>
+                            <input type="text" id="input-username" placeholder="Enter Username"/>
+                        </div>
+
+                        <div class="login-field">
+                            <span class="login-label">Password</span>
+                            <input type="password" id="input-password" placeholder="Enter Password"/>
+                        </div>
+
+                        <div class="login-error" id="login-error"></div>
+
+                        <div class="action-btn primary" id="btn-login" onclick="CosmicOnLogin()">
+                            <span id="btn-login-text">LOGIN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB MAIN -->
+                <div class="page" id="page-main">
+                    <div class="section-title">FEATURES</div>
+
+                    <div class="toggle-row">
+                        <div class="toggle-left">
+                            <span class="feature-tag">FLY</span>
+                            <span class="toggle-label">ModFly</span>
+                        </div>
+                        <div class="toggle" onclick="CosmicOnToggle(event, 'modfly')">
+                            <div class="knob"></div>
+                        </div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div class="toggle-left">
+                            <span class="feature-tag">CLIP</span>
+                            <span class="toggle-label">No Clip</span>
+                        </div>
+                        <div class="toggle" onclick="CosmicOnToggle(event, 'noclip')">
+                            <div class="knob"></div>
+                        </div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div class="toggle-left">
+                            <span class="feature-tag">FARM</span>
+                            <span class="toggle-label">Auto Farm</span>
+                        </div>
+                        <div class="toggle" onclick="CosmicOnToggle(event, 'autofarm')">
+                            <div class="knob"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB SCRIPTS -->
+                <div class="page" id="page-scripts">
+                    <div class="section-title">LIST SCRIPT</div>
+
+                    <div class="cards-wrapper">
+                        <div class="card-row">
+                            <div class="card" onclick="CosmicOnPilihScript('geiger')">
+                                <div class="card-badge">GEIGER</div>
+                                <div class="card-title">Auto Geiger</div>
+                                <div class="card-desc">SC Find Sinyal Geiger</div>
+                                <div class="card-btn"><span>Pilih</span></div>
+                            </div>
+                            <div class="card" onclick="CosmicOnPilihScript('grinder')">
+                                <div class="card-badge">GRIND</div>
+                                <div class="card-title">Auto Grinder</div>
+                                <div class="card-desc">SC Grinder Pepper</div>
+                                <div class="card-btn"><span>Pilih</span></div>
+                            </div>
+                            <div class="card" onclick="CosmicOnPilihScript('provider')">
+                                <div class="card-badge">HARVEST</div>
+                                <div class="card-title">Auto Harvest</div>
+                                <div class="card-desc">SC Harvest Provider</div>
+                                <div class="card-btn"><span>Pilih</span></div>
+                            </div>
+                            <div class="card" onclick="CosmicOnPilihScript('ptht')">
+                                <div class="card-badge">PTHT</div>
+                                <div class="card-title">Auto PTHT</div>
+                                <div class="card-desc">SC Plant Harvest Webhook</div>
+                                <div class="card-btn"><span>Pilih</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB PLAYER -->
+                <div class="page" id="page-player">
+                    <div class="section-title">PLAYER INFO</div>
+                    <div class="info-text" id="player-info-text">Tekan tombol di bawah untuk refresh info</div>
+                    <div class="action-btn primary" onclick="CosmicOnButton('info')">Refresh Info</div>
+                </div>
+
+                <!-- TAB SETTINGS -->
+                <div class="page" id="page-settings">
+                    <div class="section-title">SETTINGS</div>
+                    <div class="info-text">CosmicPanel v1.0 (Pure Cloud RCSS)</div>
+                    <div class="info-text">by Ertoxz Development</div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">Ertoxz Cosmic Development</div>
+
+    </div>
+
+</body>
+</rml>
