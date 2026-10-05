@@ -3,7 +3,7 @@
 -- =========================================================
 
 -- GANTI "USERNAME" DAN "REPO" SESUAI DENGAN GITHUB KAMU
-local GITHUB_BASE = "https://raw.githubusercontent.com/USERNAME/REPO/main/"
+local GITHUB_BASE = "https://raw.githubusercontent.com/AndikaDwiPradita/Ertoxz-Cosmic/main/"
 local SESSION_FILE = "/sdcard/Android/media/com.rtsoft.growtopia/scripts/cosmic_session.txt"
 
 COSMIC_PANEL_DOC = nil
