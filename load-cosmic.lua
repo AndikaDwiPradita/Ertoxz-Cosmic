@@ -1,9 +1,10 @@
 -- =========================================================
--- COSMIC PANEL LOGIC LOADER (REMOTE MEMORY BASED)
+-- COSMIC PANEL LOGIC LOADER (REMOTE MEMORY BASED + AUTO LOGIN)
 -- =========================================================
 
 -- GANTI "USERNAME" DAN "REPO" SESUAI DENGAN GITHUB KAMU
 local GITHUB_BASE = "https://raw.githubusercontent.com/USERNAME/REPO/main/"
+local SESSION_FILE = "/sdcard/Android/media/com.rtsoft.growtopia/scripts/cosmic_session.txt"
 
 COSMIC_PANEL_DOC = nil
 COSMIC_ACTIVE_TAB = "login"
@@ -21,6 +22,46 @@ COSMIC_TOGGLES = {
 local function GetEl(id)
     if not COSMIC_PANEL_DOC then return nil end
     return COSMIC_PANEL_DOC:GetElementById(id)
+end
+
+-- =========================================================
+-- MANAJEMEN SESI LOKAL (AUTO-LOGIN REMINDER)
+-- =========================================================
+
+local function SaveSession(username)
+    local f = io.open(SESSION_FILE, "w")
+    if f then
+        f:write("logged_in=1\n")
+        f:write("username=" .. tostring(username) .. "\n")
+        f:close()
+    end
+end
+
+local function ClearSession()
+    local f = io.open(SESSION_FILE, "w")
+    if f then
+        f:write("logged_in=0\n")
+        f:close()
+    end
+end
+
+local function ReadSession()
+    local f = io.open(SESSION_FILE, "r")
+    if not f then return nil end
+    
+    local session = {}
+    for line in f:lines() do
+        local k, v = line:match("([^=]+)=(.+)")
+        if k and v then
+            session[k] = v
+        end
+    end
+    f:close()
+
+    if session.logged_in == "1" and session.username then
+        return session.username
+    end
+    return nil
 end
 
 -- =========================================================
@@ -45,6 +86,11 @@ function CosmicOnMinimize()
 end
 
 function CosmicOnTab(tabName)
+    -- Mencegah akses ke tab lain jika belum login
+    if not COSMIC_LOGGED_IN and tabName ~= "login" then
+        tabName = "login"
+    end
+
     COSMIC_ACTIVE_TAB = tabName
     
     local tabs = {"login", "main", "scripts", "player", "settings"}
@@ -73,8 +119,10 @@ function CosmicOnLogin()
         return
     end
     
+    -- Simpan Sesi Login
     COSMIC_LOGGED_IN = true
     COSMIC_USER = userVal
+    SaveSession(userVal)
     
     if errorEl then errorEl:SetInnerRml("") end
     
@@ -91,6 +139,7 @@ end
 function CosmicOnLogout()
     COSMIC_LOGGED_IN = false
     COSMIC_USER = nil
+    ClearSession()
     
     local userStatusEl = GetEl("sidebar-user")
     if userStatusEl then userStatusEl:SetInnerRml("Belum login") end
@@ -110,7 +159,6 @@ function CosmicOnToggle(event, name)
         event.current_target:SetClass("active", state)
     end
     
-    -- Mengirim event ke Bridge Listener
     if CosmicBridge then
         CosmicBridge.Emit("onUiAction", {
             action = "TOGGLE_FEATURE",
@@ -176,7 +224,26 @@ local function InitCosmicUI()
     COSMIC_PANEL_DOC = ctx:CreateDocumentFromString(rawRml)
     if COSMIC_PANEL_DOC then
         COSMIC_PANEL_DOC:Show()
-        LogToConsole("`2[Cosmic] Panel UI & Bridge Listener rendered successfully!")
+        
+        -- Cek Sesi Auto-Login
+        local savedUser = ReadSession()
+        if savedUser then
+            COSMIC_LOGGED_IN = true
+            COSMIC_USER = savedUser
+            
+            local userStatusEl = GetEl("sidebar-user")
+            if userStatusEl then userStatusEl:SetInnerRml("User: " .. savedUser) end
+            
+            local logoutBtn = GetEl("logout-btn")
+            if logoutBtn then logoutBtn:SetClass("show", true) end
+            
+            CosmicOnTab("main")
+            LogToConsole("`2[Cosmic] Auto-login berhasil! Selamat datang kembali, " .. savedUser)
+        else
+            CosmicOnTab("login")
+            LogToConsole("`2[Cosmic] Silakan login terlebih dahulu.")
+        end
+
     else
         LogToConsole("`4[Cosmic] Failed to create RmlUI Document!")
     end
