@@ -1,5 +1,0 @@
-.hello {
-    color: red;
-    font-size: 60dp;
-    font-weight: bold;
-}
